@@ -11,6 +11,7 @@ import json
 import magic
 import requests
 from requests.auth import AuthBase
+import io
 
 from thehive4py.models import CaseHelper
 from thehive4py.query import *
@@ -217,6 +218,23 @@ class TheHiveApi:
                 return requests.post(req, headers={'Content-Type': 'application/json'}, data=case_observable.jsonify(), proxies=self.proxies, auth=self.auth, verify=self.cert)
             except requests.exceptions.RequestException as e:
                 raise CaseObservableException("Case observable create error: {}".format(e))
+
+    def get_file(self, file_id):
+        """
+            :param file_id: File identifier
+            :return: The requested file from TheHive's datastore.
+            :rtype: io.BytesIO
+        """
+        req = self.url + "/api/datastore/{}".format(file_id)
+
+        try:
+            response = requests.get(req, proxies=self.proxies, auth=self.auth, verify=self.cert)
+            if response.status_code == 200:
+                return io.BytesIO(response.content)
+            else:
+                raise TheHiveException("File fetch error (status: {}): {}".format(response.status_code, response.text))
+        except requests.exceptions.RequestException as e:
+            raise TheHiveException("File fetch error: {}".format(e))
 
     def get_case(self, case_id):
         """
