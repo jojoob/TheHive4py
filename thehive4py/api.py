@@ -169,7 +169,9 @@ class TheHiveApi:
         """
         :param task_id: Task identifier
         :param case_task_log: TheHive log
-        :type case_task_log: CaseTaskLog defined in models.py
+        :type case_task_log: CaseTaskLog defined in models.py.
+                             The attachment attribute can either be a file name or a tuple with the first
+                             element to be a file stream and the second a file name.
         :return: TheHive log
         :rtype: json
         """
@@ -178,7 +180,12 @@ class TheHiveApi:
         data = {'_json': json.dumps({"message":case_task_log.message})}
 
         if case_task_log.file:
-            f = {'attachment': (os.path.basename(case_task_log.file), open(case_task_log.file, 'rb'), magic.Magic(mime=True).from_file(case_task_log.file))}
+            if type(case_task_log.file) is tuple:
+                mimetype = magic.Magic(mime=True).from_buffer(case_task_log.file[0].read())
+                case_task_log.file[0].seek(0)
+                f = {'attachment': (case_task_log.file[1], case_task_log.file[0], mimetype)}
+            else:
+                f = {'attachment': (os.path.basename(case_task_log.file), open(case_task_log.file, 'rb'), magic.Magic(mime=True).from_file(case_task_log.file))}
             try:
                 return requests.post(req, data=data,files=f, proxies=self.proxies, auth=self.auth, verify=self.cert)
             except requests.exceptions.RequestException as e:
