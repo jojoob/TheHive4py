@@ -70,7 +70,8 @@ class TheHiveApi:
         # Add range and sort parameters
         params = {
             "range": attributes.get("range", "all"),
-            "sort": attributes.get("sort", [])
+            "sort": attributes.get("sort", []),
+            "nstats": attributes.get("nstats", False)
         }
 
         # Add body
