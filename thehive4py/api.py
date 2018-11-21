@@ -71,7 +71,8 @@ class TheHiveApi:
         # Add range and sort parameters
         params = {
             "range": attributes.get("range", "all"),
-            "sort": attributes.get("sort", [])
+            "sort": attributes.get("sort", []),
+            "nstats": attributes.get("nstats", False)
         }
 
         # Add body
@@ -85,8 +86,11 @@ class TheHiveApi:
             raise TheHiveException("Error: {}".format(e))
 
     def do_patch(self, api_url, **attributes):
-        return requests.patch(self.url + api_url, headers={'Content-Type': 'application/json'}, json=attributes,
-                              proxies=self.proxies, auth=self.auth, verify=self.cert)
+        try:
+            return requests.patch(self.url + api_url, headers={'Content-Type': 'application/json'}, json=attributes,
+                                  proxies=self.proxies, auth=self.auth, verify=self.cert)
+        except requests.exceptions.RequestException as e:
+            raise TheHiveException("Error on patch request: {}".format(e))
 
     def health(self):
         req = self.url + "/api/health"
@@ -150,10 +154,11 @@ class TheHiveApi:
         except requests.exceptions.RequestException as e:
             raise CaseTaskException("Case task create error: {}".format(e))
 
-    def update_case_task(self, task):
+    def update_case_task(self, task, fields=[]):
         """
         :Updates TheHive Task
         :param case: The task to update. The task's `id` determines which Task to update.
+        :param fields: A list of fields that should be updated. If empty update all keys.
         :return:
         """
         req = self.url + "/api/case/task/{}".format(task.id)
@@ -163,7 +168,7 @@ class TheHiveApi:
             'title', 'description', 'status', 'order', 'user', 'owner', 'flag', 'endDate'
         ]
 
-        data = {k: v for k, v in task.__dict__.items() if k in update_keys}
+        data = {k: v for k, v in task.__dict__.items() if (len(fields) > 0 and k in fields) or (len(fields) == 0 and k in update_keys)}
 
         try:
             return requests.patch(req, headers={'Content-Type': 'application/json'}, json=data,
