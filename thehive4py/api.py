@@ -11,6 +11,7 @@ import json
 import magic
 import requests
 from requests.auth import AuthBase
+import io
 
 from thehive4py.models import CaseHelper
 from thehive4py.query import *
@@ -168,7 +169,9 @@ class TheHiveApi:
         """
         :param task_id: Task identifier
         :param case_task_log: TheHive log
-        :type case_task_log: CaseTaskLog defined in models.py
+        :type case_task_log: CaseTaskLog defined in models.py.
+                             The attachment attribute can either be a file name or a tuple with the first
+                             element to be a file stream and the second a file name.
         :return: TheHive log
         :rtype: json
         """
@@ -177,7 +180,12 @@ class TheHiveApi:
         data = {'_json': json.dumps({"message":case_task_log.message})}
 
         if case_task_log.file:
-            f = {'attachment': (os.path.basename(case_task_log.file), open(case_task_log.file, 'rb'), magic.Magic(mime=True).from_file(case_task_log.file))}
+            if type(case_task_log.file) is tuple:
+                mimetype = magic.Magic(mime=True).from_buffer(case_task_log.file[0].read())
+                case_task_log.file[0].seek(0)
+                f = {'attachment': (case_task_log.file[1], case_task_log.file[0], mimetype)}
+            else:
+                f = {'attachment': (os.path.basename(case_task_log.file), open(case_task_log.file, 'rb'), magic.Magic(mime=True).from_file(case_task_log.file))}
             try:
                 return requests.post(req, data=data,files=f, proxies=self.proxies, auth=self.auth, verify=self.cert)
             except requests.exceptions.RequestException as e:
@@ -217,6 +225,23 @@ class TheHiveApi:
                 return requests.post(req, headers={'Content-Type': 'application/json'}, data=case_observable.jsonify(), proxies=self.proxies, auth=self.auth, verify=self.cert)
             except requests.exceptions.RequestException as e:
                 raise CaseObservableException("Case observable create error: {}".format(e))
+
+    def get_file(self, file_id):
+        """
+            :param file_id: File identifier
+            :return: The requested file from TheHive's datastore.
+            :rtype: io.BytesIO
+        """
+        req = self.url + "/api/datastore/{}".format(file_id)
+
+        try:
+            response = requests.get(req, proxies=self.proxies, auth=self.auth, verify=self.cert)
+            if response.status_code == 200:
+                return io.BytesIO(response.content)
+            else:
+                raise TheHiveException("File fetch error (status: {}): {}".format(response.status_code, response.text))
+        except requests.exceptions.RequestException as e:
+            raise TheHiveException("File fetch error: {}".format(e))
 
     def get_case(self, case_id):
         """
