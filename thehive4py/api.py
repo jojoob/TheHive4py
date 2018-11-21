@@ -85,8 +85,11 @@ class TheHiveApi:
             raise TheHiveException("Error: {}".format(e))
 
     def do_patch(self, api_url, **attributes):
-        return requests.patch(self.url + api_url, headers={'Content-Type': 'application/json'}, json=attributes,
-                              proxies=self.proxies, auth=self.auth, verify=self.cert)
+        try:
+            return requests.patch(self.url + api_url, headers={'Content-Type': 'application/json'}, json=attributes,
+                                  proxies=self.proxies, auth=self.auth, verify=self.cert)
+        except requests.exceptions.RequestException as e:
+            raise TheHiveException("Error on patch request: {}".format(e))
 
     def create_case(self, case):
 
