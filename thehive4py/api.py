@@ -88,6 +88,13 @@ class TheHiveApi:
         return requests.patch(self.url + api_url, headers={'Content-Type': 'application/json'}, json=attributes,
                               proxies=self.proxies, auth=self.auth, verify=self.cert)
 
+    def health(self):
+        req = self.url + "/api/health"
+        try:
+            return requests.get(req, proxies=self.proxies, auth=self.auth, verify=self.cert)
+        except requests.exceptions.RequestException as e:
+            raise TheHiveException("Error on retrieving health status: {}".format(e))
+
     def create_case(self, case):
 
         """
@@ -259,6 +266,20 @@ class TheHiveApi:
     def find_cases(self, **attributes):
         return self.__find_rows("/api/case/_search", **attributes)
 
+    def delete_case(self, case_id, force=False):
+        """
+        Deletes a TheHive case. Unless force is set to True the case is 'soft deleted' (status set to deleted).
+        :param case_id: Case identifier
+        :return: A requests response object.
+        """
+        req = self.url + "/api/case/{}".format(case_id)
+        if force:
+            req += '/force'
+        try:
+            return requests.delete(req, proxies=self.proxies, auth=self.auth, verify=self.cert)
+        except requests.exceptions.RequestException as e:
+            raise CaseException("Case deletion error: {}".format(e))
+
     def find_first(self, **attributes):
         """
             :return: first case of result set given by query
@@ -371,6 +392,20 @@ class TheHiveApi:
                 raise CaseTemplateException("Case template fetch error: Unable to find case template {}".format(name))
         except requests.exceptions.RequestException as e:
             raise CaseTemplateException("Case template fetch error: {}".format(e))
+
+    def get_case_task(self, taskId):
+        req = self.url + "/api/case/task/{}".format(taskId)
+        try:
+            return requests.get(req, proxies=self.proxies, auth=self.auth, verify=self.cert)
+        except requests.exceptions.RequestException as e:
+            raise CaseTaskException("Case task logs search error: {}".format(e))
+
+    def get_task_log(self, logId):
+        req = self.url + "/api/case/task/log/{}".format(logId)
+        try:
+            return requests.get(req, proxies=self.proxies, auth=self.auth, verify=self.cert)
+        except requests.exceptions.RequestException as e:
+            raise CaseTaskException("Case task logs search error: {}".format(e))
 
     def get_task_logs(self, taskId):
 
